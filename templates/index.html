@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Routing Algorithm Simulator - Computer Networks Project</title>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Modern Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header Navigation -->
+    <header class="main-header">
+      <div class="header-inner">
+        <div class="brand-section">
+          <div class="logo-icon">
+            <i class="fas fa-project-diagram"></i>
+          </div>
+          <div>
+            <h1 class="brand-title">Routing Algorithm Simulator</h1>
+            <div class="brand-subtitle">
+              <span>Interactive Computer Networks Laboratory</span>
+              <span class="badge-tag">B.Tech / College Project</span>
+            </div>
+          </div>
+        </div>
+
+        <nav class="header-nav">
+          <button class="nav-tab-btn active" data-tab="tab-simulator">
+            <i class="fas fa-play-circle"></i> Simulator
+          </button>
+          <button class="nav-tab-btn" data-tab="tab-c2i">
+            <i class="fas fa-infinity"></i> Count-to-Infinity Lab
+          </button>
+          <button class="nav-tab-btn" data-tab="tab-education">
+            <i class="fas fa-graduation-cap"></i> Educational Guide
+          </button>
+        </nav>
+
+        <div class="header-actions">
+          <button class="btn btn-secondary btn-sm" id="btn-reset-sample" title="Reload the 5-router sample network">
+            <i class="fas fa-rotate-left"></i> Reset Sample
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+
+      <!-- ================================================================== -->
+      <!-- TAB 1: MAIN SIMULATOR PANE                                         -->
+      <!-- ================================================================== -->
+      <section id="tab-simulator" class="tab-pane active">
+        <div class="simulator-grid">
+          
+          <!-- Column 1: Controls & Algorithm Selection -->
+          <aside class="side-panel-left">
+            
+            <!-- Algorithm Selection Card -->
+            <div class="panel-card">
+              <div class="panel-title">
+                <span class="title-left"><i class="fas fa-microchip"></i> Algorithm</span>
+                <span class="panel-badge">Select</span>
+              </div>
+
+              <div class="algorithm-selector">
+                <label class="algo-option-card selected">
+                  <input type="radio" name="algorithm" value="dijkstra" checked>
+                  <div class="algo-info">
+                    <h4>Dijkstra's Algorithm</h4>
+                    <p>Link State Routing (OSPF)</p>
+                    <span class="algo-type-tag tag-ls">Global Topology View</span>
+                  </div>
+                </label>
+
+                <label class="algo-option-card">
+                  <input type="radio" name="algorithm" value="distance_vector">
+                  <div class="algo-info">
+                    <h4>Bellman-Ford Algorithm</h4>
+                    <p>Distance Vector Routing (RIP)</p>
+                    <span class="algo-type-tag tag-dv">Iterative Neighbor Exchange</span>
+                  </div>
+                </label>
+              </div>
+
+              <div class="edu-callout" id="algo-desc-banner" style="margin-top: 0.9rem; padding: 0.65rem 0.85rem; font-size: 0.72rem;">
+                <strong>Link-State Routing:</strong> Assumes each router possesses a synchronized global map of the network (LSDB) and computes its own Shortest Path Tree (SPT) independently.
+              </div>
+            </div>
+
+            <!-- Execution Controls Card -->
+            <div class="panel-card">
+              <div class="panel-title">
+                <span class="title-left"><i class="fas fa-sliders"></i> Simulation</span>
+                <span class="panel-badge">Controls</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="source-router-select">Source Router (Origin)</label>
+                <select class="form-select" id="source-router-select">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+
+              <button class="btn btn-primary btn-block" id="btn-start-simulation" style="margin-bottom: 0.85rem;">
+                <i class="fas fa-bolt"></i> Start Simulation
+              </button>
+
+              <!-- Step Player -->
+              <div class="player-container">
+                <div class="player-controls-row">
+                  <button class="btn btn-secondary btn-icon" id="btn-prev-step" title="Previous Step" disabled>
+                    <i class="fas fa-backward-step"></i>
+                  </button>
+                  <button class="btn btn-primary" id="btn-play-pause" title="Play or Pause Simulation">
+                    <i class="fas fa-play"></i> Play
+                  </button>
+                  <button class="btn btn-secondary btn-icon" id="btn-next-step" title="Next Step" disabled>
+                    <i class="fas fa-forward-step"></i>
+                  </button>
+                  <button class="btn btn-secondary btn-icon" id="btn-run-all" title="Instantly Complete All Steps">
+                    <i class="fas fa-forward-fast"></i>
+                  </button>
+                  <button class="btn btn-secondary btn-icon" id="btn-reset-sim" title="Reset Simulation">
+                    <i class="fas fa-rotate"></i>
+                  </button>
+                </div>
+
+                <div class="player-progress-container">
+                  <div class="progress-header">
+                    <span>Progress</span>
+                    <span id="step-counter-label">Step 0 of 0</span>
+                  </div>
+                  <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="simulation-progress-bar"></div>
+                  </div>
+                </div>
+
+                <div class="speed-control">
+                  <span>Speed:</span>
+                  <input type="range" id="simulation-speed-slider" min="100" max="1450" value="900">
+                  <span id="speed-val-label" style="font-family: monospace;">700ms</span>
+                </div>
+              </div>
+
+              <!-- Active Step Status Card -->
+              <div class="step-status-card">
+                <div class="step-status-title" id="step-status-title">
+                  <span><i class="fas fa-info-circle"></i> STATUS</span>
+                  <span class="panel-badge">Ready</span>
+                </div>
+                <div class="step-status-desc" id="step-status-desc">
+                  Select a source router and press <strong>Start Simulation</strong> to begin exploring shortest path calculations.
+                </div>
+              </div>
+
+              <!-- Statistics Card -->
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <div class="stat-val" id="stat-iterations">-</div>
+                  <div class="stat-label">Steps / Iters</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-val" id="stat-updates">-</div>
+                  <div class="stat-label">Route Updates</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-val" id="stat-routers">5</div>
+                  <div class="stat-label">Routers</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-val" id="stat-edges">7</div>
+                  <div class="stat-label">Connections</div>
+                </div>
+              </div>
+            </div>
+
+          </aside>
+
+          <!-- Column 2: Network Topology Visualizer -->
+          <div class="center-panel">
+            <div class="graph-container-card">
+              
+              <!-- Graph Toolbar -->
+              <div class="graph-toolbar">
+                <div class="graph-toolbar-group">
+                  <span style="font-size:0.75rem; font-weight:700; color:#e2e8f0; margin-right:0.3rem;">TOPOLOGY:</span>
+                  <button class="btn btn-secondary btn-sm" id="btn-open-add-node" title="Add new router node">
+                    <i class="fas fa-plus"></i> Router
+                  </button>
+                  <button class="btn btn-secondary btn-sm" id="btn-open-add-edge" title="Connect two routers with edge cost">
+                    <i class="fas fa-link"></i> Connect
+                  </button>
+                  <button class="btn btn-secondary btn-sm" id="btn-open-delete-node" title="Delete router node">
+                    <i class="fas fa-trash"></i> Delete
+                  </button>
+                  <button class="btn btn-secondary btn-sm" id="btn-open-random-modal" title="Generate random topology">
+                    <i class="fas fa-dice"></i> Random
+                  </button>
+                </div>
+
+                <div class="graph-toolbar-group">
+                  <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); margin-right:0.2rem;">PRESETS:</span>
+                  <button class="btn btn-secondary btn-sm" id="preset-sample-btn" title="Sample 5-Node Graph (A-E)">Sample</button>
+                  <button class="btn btn-secondary btn-sm" id="preset-mesh-btn" title="6-Node Ring Mesh">Mesh</button>
+                  <button class="btn btn-secondary btn-sm" id="preset-c2i-btn" title="Line Topology for Distance Vector">Line</button>
+                  <button class="btn btn-secondary btn-sm" id="preset-disconnected-btn" title="Partitioned Unreachable Network">Partitioned</button>
+                  <button class="btn btn-danger btn-sm" id="btn-clear-network" title="Clear All Routers">Clear</button>
+                </div>
+              </div>
+
+              <!-- Interactive Helper Pill -->
+              <div class="graph-helper-pill">
+                <i class="fas fa-hand-pointer" style="color:var(--accent-cyan);"></i>
+                <span>Click router to set Source. Click connection to edit cost.</span>
+              </div>
+
+              <!-- Cytoscape Container -->
+              <div id="cy"></div>
+
+              <!-- Graph Visual Legend -->
+              <div class="graph-legend">
+                <div class="legend-item"><span class="legend-dot dot-source"></span> Source Router</div>
+                <div class="legend-item"><span class="legend-dot dot-visited"></span> Settled / Visited Node</div>
+                <div class="legend-item"><span class="legend-dot dot-examining"></span> Active / Examining</div>
+                <div class="legend-item"><span class="legend-dot dot-tree"></span> Shortest Path Tree Edge</div>
+                <div class="legend-item" style="margin-left: auto;">
+                  <button class="btn btn-secondary btn-sm" id="btn-fit-graph" title="Fit to Screen"><i class="fas fa-compress"></i> Fit</button>
+                  <button class="btn btn-secondary btn-sm" id="btn-relayout-graph" title="Rearrange Layout"><i class="fas fa-diagram-project"></i> Relayout</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: Routing Tables & Simulation Logs -->
+          <aside class="side-panel-right">
+            
+            <!-- Dynamic Routing Table Card -->
+            <div class="panel-card">
+              <div class="panel-title">
+                <span class="title-left"><i class="fas fa-table"></i> Routing Table</span>
+                <button class="btn btn-secondary btn-sm" id="btn-export-csv" title="Export as CSV file">
+                  <i class="fas fa-file-csv"></i> Export CSV
+                </button>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label class="form-label" for="view-router-select">Viewing Table For Router:</label>
+                <select class="form-select" id="view-router-select">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+
+              <div class="table-wrapper">
+                <table class="routing-table">
+                  <thead>
+                    <tr>
+                      <th>Router</th>
+                      <th>Dest</th>
+                      <th>Next Hop</th>
+                      <th>Cost</th>
+                      <th>Path</th>
+                    </tr>
+                  </thead>
+                  <tbody id="routing-table-body">
+                    <tr>
+                      <td colspan="5" style="text-align:center; color:var(--text-muted); padding: 1.5rem;">
+                        Run a simulation to generate dynamic routing table entries.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.5rem;">
+                <i class="fas fa-info-circle"></i> Click any table row to highlight its full path on the network graph.
+              </p>
+            </div>
+
+            <!-- Simulation Logs Card -->
+            <div class="panel-card">
+              <div class="panel-title">
+                <span class="title-left"><i class="fas fa-terminal"></i> Simulation Log</span>
+                <button class="btn btn-secondary btn-sm" id="btn-clear-logs" title="Clear Log Output">Clear</button>
+              </div>
+
+              <div class="log-stream" id="simulation-logs-stream">
+                <div class="log-entry">
+                  <span class="log-badge badge-init">READY</span>
+                  <span class="log-msg">Simulator initialized. Ready to execute routing algorithms.</span>
+                </div>
+              </div>
+            </div>
+
+          </aside>
+
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TAB 2: COUNT-TO-INFINITY LAB                                       -->
+      <!-- ================================================================== -->
+      <section id="tab-c2i" class="tab-pane">
+        <div class="edu-hero" style="padding: 1.5rem 1rem; margin-bottom: 1.25rem;">
+          <h1>Count-to-Infinity Problem Lab</h1>
+          <p>
+            Explore how Distance Vector routing can create dangerous routing loops when a link fails,
+            and discover how <strong>Split Horizon</strong> and <strong>Poison Reverse</strong> extinguish them.
+          </p>
+        </div>
+
+        <!-- Loop Alert Warning Banner -->
+        <div class="c2i-banner-alert" id="c2i-loop-alert" style="display: none;">
+          <div class="c2i-banner-icon"><i class="fas fa-triangle-exclamation"></i></div>
+          <div>
+            <strong style="color: #fda4af; font-size: 0.95rem;">ROUTING LOOP DETECTED!</strong>
+            <p style="color: #fecdd3; font-size: 0.8rem; margin-top: 0.2rem;">
+              Packets destined for DEST are trapped bouncing in a cycle: <span id="c2i-loop-path" style="font-family: monospace; font-weight: bold; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;"></span>.
+              Metric is incrementing toward infinity threshold.
+            </p>
+          </div>
+        </div>
+
+        <div class="c2i-container">
+          
+          <!-- Controls Panel -->
+          <div class="panel-card">
+            <div class="panel-title">
+              <span class="title-left"><i class="fas fa-vial"></i> Experiment Setup</span>
+              <span class="panel-badge">Configuration</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="c2i-mode-select">Loop Prevention Technique</label>
+              <select class="form-select" id="c2i-mode-select">
+                <option value="standard">Standard Distance Vector (No Loop Prevention)</option>
+                <option value="split_horizon">With Split Horizon (Suppress Reverse Advertisements)</option>
+                <option value="poison_reverse">With Poison Reverse (Advertise Reverse as ∞)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="c2i-threshold-input">Configurable Infinity Threshold (Metric)</label>
+              <select class="form-select" id="c2i-threshold-input">
+                <option value="16" selected>16 (RFC 1058 RIP Standard)</option>
+                <option value="12">12</option>
+                <option value="8">8 (Fast Demonstration)</option>
+                <option value="20">20</option>
+              </select>
+            </div>
+
+            <button class="btn btn-cyan btn-block" id="btn-run-c2i" style="margin-bottom: 1rem;">
+              <i class="fas fa-play"></i> Run Experiment
+            </button>
+
+            <!-- C2I Player Controls -->
+            <div class="player-container">
+              <div class="player-controls-row">
+                <button class="btn btn-secondary btn-icon" id="c2i-btn-prev" title="Previous Iteration">
+                  <i class="fas fa-backward-step"></i>
+                </button>
+                <button class="btn btn-primary" id="c2i-btn-play" title="Auto Play Iterations">
+                  <i class="fas fa-play"></i> Auto Play
+                </button>
+                <button class="btn btn-secondary btn-icon" id="c2i-btn-next" title="Next Iteration">
+                  <i class="fas fa-forward-step"></i>
+                </button>
+                <button class="btn btn-secondary btn-icon" id="c2i-btn-reset" title="Reset">
+                  <i class="fas fa-rotate"></i>
+                </button>
+              </div>
+
+              <div class="player-progress-container">
+                <div class="progress-header">
+                  <span>Iteration Progress</span>
+                  <span id="c2i-step-counter">Iteration 0 of 0</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" id="c2i-progress-bar"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Experiment Summary Box -->
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem; margin-top: 1rem;">
+              <h4 style="font-size: 0.8rem; color: #38bdf8; text-transform: uppercase; margin-bottom: 0.5rem;">Results Summary</h4>
+              <div style="font-size: 0.78rem; color: #cbd5e1; line-height: 1.5;">
+                <p><strong>Mode:</strong> <span id="c2i-sum-mode">Standard DV</span></p>
+                <p><strong>Iterations to Resolve:</strong> <span id="c2i-sum-iters">-</span></p>
+                <p><strong>Peak Metric Observed:</strong> <span id="c2i-sum-max">-</span></p>
+                <p style="margin-top: 0.4rem; color: var(--text-secondary); font-size: 0.74rem;" id="c2i-sum-expl"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Topology & Live Metric Tracker -->
+          <div class="center-panel">
+            
+            <!-- Graph Canvas -->
+            <div class="graph-container-card">
+              <div class="graph-toolbar">
+                <span style="font-weight: 700; font-size: 0.85rem; color: #fff;">Topology: Router A — Router B — Router C — [DEST]</span>
+                <span class="panel-badge" style="background: rgba(244,63,94,0.2); color: #fda4af;">Simulating Link C-DEST Failure</span>
+              </div>
+              <div id="cy-c2i" style="width: 100%; height: 280px; background: #080c14;"></div>
+            </div>
+
+            <!-- Metric Cards for Target Destination -->
+            <div class="c2i-cards-row">
+              <div class="c2i-metric-card">
+                <div class="c2i-metric-title">Router A -> DEST</div>
+                <div class="c2i-metric-val" id="c2i-cost-a">2</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Next Hop: <span id="c2i-hop-a" style="color:#c084fc; font-weight:bold;">B</span></div>
+              </div>
+              <div class="c2i-metric-card">
+                <div class="c2i-metric-title">Router B -> DEST</div>
+                <div class="c2i-metric-val" id="c2i-cost-b">1</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Next Hop: <span id="c2i-hop-b" style="color:#c084fc; font-weight:bold;">C</span></div>
+              </div>
+              <div class="c2i-metric-card">
+                <div class="c2i-metric-title">Router C -> DEST</div>
+                <div class="c2i-metric-val" id="c2i-cost-c">0</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Next Hop: <span id="c2i-hop-c" style="color:#c084fc; font-weight:bold;">DEST</span></div>
+              </div>
+            </div>
+
+            <!-- Iteration Narrative & Advertisement Stream -->
+            <div class="panel-card">
+              <div class="panel-title">
+                <span class="title-left"><i class="fas fa-list-check"></i> Step Narrative & Vector Exchanges</span>
+              </div>
+              <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem;">
+                <p id="c2i-step-desc" style="font-size: 0.85rem; color: #e2e8f0; line-height: 1.5;">
+                  Click <strong>Run Experiment</strong> to initiate the Count-to-Infinity simulation.
+                </p>
+              </div>
+
+              <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.4rem;">Advertisements & Updates In This Round:</h4>
+              <ul id="c2i-log-list" style="list-style: none; font-size: 0.78rem; font-family: monospace; max-height: 180px; overflow-y: auto;">
+                <li style="color: var(--text-muted);">No activity recorded yet.</li>
+              </ul>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TAB 3: EDUCATIONAL GUIDE                                           -->
+      <!-- ================================================================== -->
+      <section id="tab-education" class="tab-pane">
+        <div class="edu-container">
+          
+          <div class="edu-hero">
+            <h1>Computer Networks Routing Theory Guide</h1>
+            <p>
+              A comprehensive educational companion for understanding Shortest Path Routing,
+              Link State protocols, Distance Vector equations, and routing loop remedies.
+            </p>
+          </div>
+
+          <!-- Section 1 -->
+          <div class="edu-section">
+            <h2><i class="fas fa-network-wired" style="color:var(--accent-cyan);"></i> 1. Fundamentals of Network Routing</h2>
+            <p>
+              In computer networking, <strong>routing</strong> is the process of selecting paths across a network of interconnected routers to transfer data packets from a source host to a destination host.
+            </p>
+            <div class="edu-callout">
+              <strong>Forwarding vs. Routing:</strong><br>
+              • <strong>Routing (Control Plane):</strong> Network-wide logic that computes end-to-end paths (routing tables) using algorithms like Dijkstra or Bellman-Ford.<br>
+              • <strong>Forwarding (Data Plane):</strong> Router-local hardware/software action of transferring a packet from an input interface to an output interface based on the routing table.
+            </div>
+            <p>
+              A <strong>Routing Table</strong> typically maintains entries with:
+              <em>Destination Network / IP</em>, <em>Cost / Metric</em>, <em>Next-Hop Router</em>, and <em>Outbound Interface</em>.
+              The <strong>Next Hop</strong> is the address of the next immediate gateway router along the optimal path.
+            </p>
+          </div>
+
+          <!-- Section 2 -->
+          <div class="edu-section">
+            <h2><i class="fas fa-satellite-dish" style="color:var(--accent-purple);"></i> 2. Link-State Routing & Dijkstra's Algorithm</h2>
+            <p>
+              In <strong>Link-State Routing</strong> (exemplified by modern internet protocols like <strong>OSPF</strong> and <strong>IS-IS</strong>), every router possesses a global and complete picture of the entire network topology.
+            </p>
+            <h3>How Link-State Works:</h3>
+            <ol style="margin-left: 1.5rem; color: #cbd5e1; line-height: 1.8;">
+              <li><strong>Neighbor Discovery:</strong> Each router sends HELLO packets to identify directly connected neighbors.</li>
+              <li><strong>LSP / LSA Flooding:</strong> Each router creates a <em>Link State Packet (LSP)</em> advertising its connected links and costs, and reliably floods it to every other router in the Autonomous System.</li>
+              <li><strong>Link State Database (LSDB):</strong> Every router assembles these packets into an identical global topology database.</li>
+              <li><strong>Shortest Path Tree (SPT):</strong> Each router independently runs <strong>Dijkstra's Algorithm</strong> using itself as the root to construct the shortest-path forwarding tree.</li>
+            </ol>
+            <div class="edu-callout">
+              <strong>Dijkstra's Shortest Path Algorithm:</strong><br>
+              Maintains a tentative cost to each node. At each step, it extracts the unvisited node with the lowest cost, marks it as permanently settled (visited), and relaxes all outgoing edges to its unvisited neighbors:
+              <br><code>If dist[u] + cost(u, v) &lt; dist[v], then dist[v] = dist[u] + cost(u, v) and pred[v] = u.</code>
+            </div>
+          </div>
+
+          <!-- Section 3 -->
+          <div class="edu-section">
+            <h2><i class="fas fa-arrows-split-up-and-left" style="color:var(--accent-blue);"></i> 3. Distance-Vector Routing & Bellman-Ford</h2>
+            <p>
+              In <strong>Distance-Vector Routing</strong> (used in protocols such as <strong>RIP</strong> - Routing Information Protocol), routers do <em>not</em> know the global topology.
+              Instead, they only know:
+            </p>
+            <ul style="margin-left: 1.5rem; color: #cbd5e1; line-height: 1.8;">
+              <li>The direct costs to their physical neighbors.</li>
+              <li>The distance vectors sent to them by their physical neighbors.</li>
+            </ul>
+            <p style="margin-top: 1rem;">
+              This is often referred to as <em>"routing by rumor"</em>. Each router updates its table using the <strong>Bellman-Ford Equation</strong>:
+            </p>
+            <div class="edu-callout">
+              <strong>Bellman-Ford Equation:</strong><br>
+              <code style="font-size: 1rem; color: #38bdf8;">D_x(y) = min_v [ c(x, v) + D_v(y) ]</code><br>
+              Where router <code>x</code> computes its shortest distance to destination <code>y</code> by taking the minimum over all direct neighbors <code>v</code> of the link cost <code>c(x, v)</code> plus neighbor <code>v</code>'s reported distance to <code>y</code>.
+            </div>
+          </div>
+
+          <!-- Section 4: Comparison Table -->
+          <div class="edu-section">
+            <h2><i class="fas fa-code-compare" style="color:var(--accent-emerald);"></i> 4. Comparison: Link-State vs. Distance-Vector</h2>
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Link-State (Dijkstra / OSPF)</th>
+                  <th>Distance-Vector (Bellman-Ford / RIP)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Knowledge of Topology</strong></td>
+                  <td>Global: Complete view of all routers and links.</td>
+                  <td>Local: Only knows direct neighbors and their vectors.</td>
+                </tr>
+                <tr>
+                  <td><strong>Routing Protocol Examples</strong></td>
+                  <td>OSPF, IS-IS</td>
+                  <td>RIPv1, RIPv2, IGRP, EIGRP (hybrid)</td>
+                </tr>
+                <tr>
+                  <td><strong>Message Exchanges</strong></td>
+                  <td>Floods link state advertisements (LSAs) across entire network.</td>
+                  <td>Exchanges full routing vectors only with adjacent neighbors.</td>
+                </tr>
+                <tr>
+                  <td><strong>Convergence Speed</strong></td>
+                  <td>Very Fast: Reacts swiftly to link failures.</td>
+                  <td>Slow: Routing updates propagate hop-by-hop.</td>
+                </tr>
+                <tr>
+                  <td><strong>Routing Loops</strong></td>
+                  <td>Rare / Transient: Routers share consistent graph views.</td>
+                  <td>Susceptible to loops & Count-to-Infinity problem.</td>
+                </tr>
+                <tr>
+                  <td><strong>Memory & CPU Overhead</strong></td>
+                  <td>Higher: Requires memory for full LSDB and CPU for Dijkstra.</td>
+                  <td>Lower: Modest memory and computation per router.</td>
+                </tr>
+                <tr>
+                  <td><strong>Negative Edge Weights</strong></td>
+                  <td>Not supported (Dijkstra fails with negative cycles).</td>
+                  <td>Supported theoretically by Bellman-Ford (without negative cycles).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Section 5: Count to Infinity -->
+          <div class="edu-section">
+            <h2><i class="fas fa-infinity" style="color:var(--accent-rose);"></i> 5. The Count-to-Infinity Problem & Remedies</h2>
+            <p>
+              The <strong>Count-to-Infinity Problem</strong> is a classic flaw in Distance Vector protocols that occurs when a link breaks or a destination network goes offline.
+            </p>
+            <h3>Root Cause:</h3>
+            <p>
+              When a router loses its connection to a destination, its neighbor still has a stale route pointing back through that router.
+              Because distance vectors do not carry full path trajectories, the disconnected router erroneously believes its neighbor offers an alternate bypass path!
+              Both routers increment their costs mutually on each round, creating a routing loop that persists until costs reach infinity.
+            </p>
+            <h3>Standard Solutions:</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+              <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem;">
+                <h4 style="color: #38bdf8; margin-bottom: 0.4rem;"><i class="fas fa-hand"></i> Split Horizon</h4>
+                <p style="font-size: 0.82rem; color: #cbd5e1;">
+                  A router never advertises a route back out the interface or to the neighbor from which that route was originally learned.
+                </p>
+              </div>
+              <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem;">
+                <h4 style="color: #c084fc; margin-bottom: 0.4rem;"><i class="fas fa-skull-crossbones"></i> Poison Reverse</h4>
+                <p style="font-size: 0.82rem; color: #cbd5e1;">
+                  The router advertises the route back to the learning neighbor, but explicitly overwrites the metric to <strong>∞ (16)</strong>.
+                </p>
+              </div>
+              <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem;">
+                <h4 style="color: #f59e0b; margin-bottom: 0.4rem;"><i class="fas fa-clock"></i> Hold-Down Timers</h4>
+                <p style="font-size: 0.82rem; color: #cbd5e1;">
+                  When a router is informed of a route failure, it starts a timer and refuses any new advertisements for that destination until the timer expires.
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================================================================== -->
+    <!-- MODALS                                                             -->
+    <!-- ================================================================== -->
+
+    <!-- Add Router Modal -->
+    <div class="modal-overlay" id="modal-add-node">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3><i class="fas fa-plus-circle" style="color:var(--accent-cyan);"></i> Add New Router</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="input-new-node-id">Router Identifier (e.g. F, R1, R7):</label>
+            <input type="text" class="form-input" id="input-new-node-id" maxlength="6" placeholder="F">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-cancel-btn">Cancel</button>
+          <button class="btn btn-primary" id="btn-submit-add-node">Add Router</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Router Modal -->
+    <div class="modal-overlay" id="modal-delete-node">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3><i class="fas fa-trash" style="color:var(--accent-rose);"></i> Delete Router</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="select-delete-node">Select Router to Remove:</label>
+            <select class="form-select" id="select-delete-node"></select>
+          </div>
+          <p style="font-size:0.75rem; color:var(--text-muted);">
+            Deleting a router also removes all associated link connections automatically.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-cancel-btn">Cancel</button>
+          <button class="btn btn-danger" id="btn-submit-delete-node">Delete Router</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Connection Modal -->
+    <div class="modal-overlay" id="modal-add-edge">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3><i class="fas fa-link" style="color:var(--accent-purple);"></i> Connect Routers</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="edge-source-select">Endpoint 1 (Router A):</label>
+            <select class="form-select" id="edge-source-select"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edge-target-select">Endpoint 2 (Router B):</label>
+            <select class="form-select" id="edge-target-select"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edge-weight-input">Connection Cost (Metric &gt; 0):</label>
+            <input type="number" class="form-input" id="edge-weight-input" min="1" max="999" value="3">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-cancel-btn">Cancel</button>
+          <button class="btn btn-primary" id="btn-submit-add-edge">Create Connection</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit / Delete Connection Modal -->
+    <div class="modal-overlay" id="modal-edit-edge">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3><i class="fas fa-pen-to-square" style="color:var(--accent-cyan);"></i> Connection Settings</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.9rem; margin-bottom: 0.85rem;">
+            Connection: <strong id="edit-edge-endpoints-label" style="color:#38bdf8;">A &lt;---&gt; B</strong>
+          </p>
+          <input type="hidden" id="edit-edge-u">
+          <input type="hidden" id="edit-edge-v">
+          <div class="form-group">
+            <label class="form-label" for="edit-edge-weight-input">Metric / Cost:</label>
+            <input type="number" class="form-input" id="edit-edge-weight-input" min="1" max="999">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-danger" id="btn-delete-edge-action">Delete Link</button>
+          <button class="btn btn-secondary modal-cancel-btn">Cancel</button>
+          <button class="btn btn-primary" id="btn-submit-update-edge">Save Cost</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Random Network Modal -->
+    <div class="modal-overlay" id="modal-random-network">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3><i class="fas fa-dice" style="color:var(--accent-amber);"></i> Generate Random Network</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="random-node-count">Number of Routers (3 - 10):</label>
+            <input type="number" class="form-input" id="random-node-count" min="3" max="10" value="6">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="random-density">Mesh Connection Density (0.2 - 0.8):</label>
+            <input type="number" step="0.05" class="form-input" id="random-density" min="0.1" max="1.0" value="0.45">
+          </div>
+          <div class="button-grid">
+            <div class="form-group">
+              <label class="form-label" for="random-min-weight">Min Cost:</label>
+              <input type="number" class="form-input" id="random-min-weight" min="1" max="50" value="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="random-max-weight">Max Cost:</label>
+              <input type="number" class="form-input" id="random-max-weight" min="1" max="50" value="12">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary modal-cancel-btn">Cancel</button>
+          <button class="btn btn-primary" id="btn-submit-random-gen">Generate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <!-- 1. Cytoscape.js (Offline bundled vendor script with CDN fallback) -->
+  <script src="{{ url_for('static', filename='vendor/cytoscape.min.js') }}"></script>
+  <script>
+    if (!window.cytoscape) {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"><\/script>');
+    }
+  </script>
+
+  <!-- 2. Application Modules -->
+  <script src="{{ url_for('static', filename='js/network_graph.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/simulator.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/count_infinity.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
